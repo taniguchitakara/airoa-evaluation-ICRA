@@ -19,6 +19,7 @@ For an OpenPI-loader example, fork from the `sample-openpi` branch instead.
 
 import argparse
 import importlib
+import inspect
 import logging
 import os
 from pathlib import Path
@@ -26,6 +27,7 @@ from pathlib import Path
 import numpy as np
 
 from runtime_core.websocket_policy_server import WebsocketPolicyServer
+from my_policy.adapter import MyPolicyAdapter  # Example adapter for loading your model from checkpoint
 
 
 class ZeroPolicy:
@@ -54,7 +56,7 @@ class ZeroPolicy:
         return {"actions": np.zeros((1, 11), dtype=np.float32)}
 
 
-def _load_policy(policy_module: str | None, checkpoint_dir: str | None):
+def _load_policy(policy_module: str | None, checkpoint_dir: str | None, device: str):
     """Load `policy_module:Class` if provided, else fall back to ZeroPolicy."""
     if not policy_module:
         return ZeroPolicy(checkpoint_dir=checkpoint_dir)
@@ -66,7 +68,17 @@ def _load_policy(policy_module: str | None, checkpoint_dir: str | None):
     module_name, class_name = policy_module.split(":", 1)
     mod = importlib.import_module(module_name)
     cls = getattr(mod, class_name)
-    return cls(checkpoint_dir=checkpoint_dir)
+    kwargs: dict[str, object] = {}
+    parameters = inspect.signature(cls.__init__).parameters
+
+    if "checkpoint_dir" in parameters:
+        kwargs["checkpoint_dir"] = checkpoint_dir
+    if "checkpoint_path" in parameters:
+        kwargs["checkpoint_path"] = checkpoint_dir
+    if "device" in parameters:
+        kwargs["device"] = device
+
+    return cls(**kwargs)
 
 
 def parse_args() -> argparse.Namespace:
@@ -77,11 +89,17 @@ def parse_args() -> argparse.Namespace:
         help="Path to checkpoint directory (passed to your policy class).",
     )
     parser.add_argument(
+        "--pytorch-device",
+        default=os.environ.get("POLICY_PYTORCH_DEVICE", "cuda"),
+        help="Device string passed to adapters that accept a `device` argument.",
+    )
+    parser.add_argument(
         "--policy-module",
         default=os.environ.get("POLICY_MODULE"),
         help=(
             "Import path of your policy class in 'module:Class' form, e.g. "
-            "'my_policy.adapter:MyPolicyAdapter'. Defaults to the placeholder ZeroPolicy."
+            "'my_policy.adapter:MyPolicyAdapter'. If unset, MyPolicyAdapter is used when "
+            "--checkpoint-dir is provided; otherwise ZeroPolicy is used."
         ),
     )
     parser.add_argument("--host", default="0.0.0.0", help="Bind host")
@@ -99,12 +117,24 @@ def main() -> None:
     else:
         checkpoint_dir = None
 
-    policy = _load_policy(args.policy_module, checkpoint_dir)
+    if args.policy_module:
+        policy = _load_policy(args.policy_module, checkpoint_dir, args.pytorch_device)
+        selected_policy = args.policy_module
+    elif checkpoint_dir:
+        policy = MyPolicyAdapter(
+            checkpoint_path=checkpoint_dir,
+            device=args.pytorch_device or "cuda",
+        )
+        selected_policy = "my_policy.adapter:MyPolicyAdapter"
+    else:
+        policy = ZeroPolicy(checkpoint_dir=None)
+        selected_policy = "ZeroPolicy"
+
     metadata = dict(getattr(policy, "metadata", {}))
     metadata.update(
         {
             "checkpoint_dir": checkpoint_dir,
-            "policy_module": args.policy_module or "ZeroPolicy",
+            "policy_module": selected_policy,
             "server_host": args.host,
             "server_port": args.port,
         }
@@ -112,7 +142,7 @@ def main() -> None:
 
     logging.info(
         "Serving policy=%s checkpoint=%s on %s:%s",
-        args.policy_module or "ZeroPolicy",
+        selected_policy,
         checkpoint_dir,
         args.host,
         args.port,
