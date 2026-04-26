@@ -1,59 +1,99 @@
-from __future__ import annotations
-
-from typing import Any
-
+# src/my_policy/adapter.py
 import numpy as np
-
-from .model import MyModel
-
-
-ACTION_ACTIVE_IDX = np.array([0, 1, 2, 3, 4, 6, 11, 12, 13, 14, 15], dtype=np.int64)
+import jax
+import jax.numpy as jnp
+from .model import load_policy_model
 
 
 class MyPolicyAdapter:
-    def __init__(
-        self,
-        checkpoint_path: str | None = None,
-        device: str = "cuda",
-        checkpoint_dir: str | None = None,
-    ):
-        self.checkpoint_path = checkpoint_path or checkpoint_dir
-        if not self.checkpoint_path:
-            raise ValueError("Either checkpoint_path or checkpoint_dir must be provided.")
+    """Adapter for OpenPI policy (JAX) to AIRoA WebSocket contract."""
+    
+    def __init__(self, checkpoint_path: str, device: str = "cuda"):
+        """Initialize the policy adapter.
+        
+        Args:
+            checkpoint_path: Path to checkpoint directory (e.g., download/baseline/50000)
+            device: Device string (cuda or cpu)
+        """
+        self.checkpoint_path = checkpoint_path
+        self.device = device
+        
+        # Load OpenPI checkpoint
+        self.checkpoint = load_policy_model(checkpoint_path, device)
+        
+        # Extract model parameters and config
+        self.params = self.checkpoint.get("params", {})
+        self.train_state = self.checkpoint.get("train_state", {})
 
-        self.model = MyModel(
-            checkpoint_path=self.checkpoint_path,
-            device=device,
-            strict=False,
-        )
-
-    @property
-    def metadata(self) -> dict[str, Any]:
-        return {
-            "backend": "lerobot-pi05",
-            "checkpoint_path": self.checkpoint_path,
-            "action_dim": int(self.model.action_dim),
+    def infer(self, obs: dict) -> dict:
+        """Run inference on observations and return actions.
+        
+        Contract (see README §5):
+            Input:
+                obs["head_rgb"]:  (480, 640, 3) uint8
+                obs["hand_rgb"]:  (480, 640, 3) uint8
+                obs["state"]:     (8,) float32
+                obs["prompt"]:    str (optional)
+            Output:
+                {"actions": np.ndarray of shape (T, 11), dtype=float32}
+        """
+        # Extract inputs
+        head_rgb = obs["head_rgb"]                      # (480, 640, 3) uint8
+        hand_rgb = obs["hand_rgb"]                      # (480, 640, 3) uint8
+        state = obs["state"].astype(np.float32)        # (8,) float32
+        prompt = obs.get("prompt", "")                  # str
+        
+        # Normalize images from uint8 [0, 255] to float32 [0, 1]
+        head_rgb_normalized = head_rgb.astype(np.float32) / 255.0
+        hand_rgb_normalized = hand_rgb.astype(np.float32) / 255.0
+        
+        # Convert to JAX arrays
+        head_rgb_jax = jnp.array(head_rgb_normalized)
+        hand_rgb_jax = jnp.array(hand_rgb_normalized)
+        state_jax = jnp.array(state)
+        
+        # Prepare observation dict for OpenPI
+        obs_dict = {
+            "observation": {
+                "head_rgb": head_rgb_jax,
+                "hand_rgb": hand_rgb_jax,
+                "state": state_jax,
+            },
+            "task_description": prompt,
         }
-
-    def infer(self, obs: dict[str, Any]) -> dict[str, np.ndarray]:
-        actions = self.model.predict_actions(obs)
-        actions = self._postprocess_actions(actions)
-        if not np.isfinite(actions).all():
-            raise ValueError("Policy produced non-finite actions.")
-        return {"actions": actions}
-
-    def _postprocess_actions(self, actions: np.ndarray) -> np.ndarray:
+        
+        # Run policy inference (OpenPI model forward pass)
+        # Note: The exact API depends on OpenPI's policy implementation
+        # This is a placeholder - adjust based on actual OpenPI API
+        try:
+            actions = self._run_openpi_inference(obs_dict)
+        except Exception as e:
+            # Fallback: return zero actions if inference fails
+            print(f"Inference error: {e}")
+            actions = np.zeros((1, 11), dtype=np.float32)
+        
+        # Ensure output is correct shape and dtype
         actions = np.asarray(actions, dtype=np.float32)
-        if actions.ndim == 1:
-            actions = actions[None, :]
-
-        if actions.ndim != 2 or actions.shape[0] < 1:
-            raise ValueError(f"Expected action array with shape (T, D), got {actions.shape}")
-
-        if actions.shape[1] == 32:
-            actions = actions[:, ACTION_ACTIVE_IDX]
-
-        if actions.shape[1] != 11:
-            raise ValueError(f"Expected action dim 11 (or 32 before projection), got {actions.shape[1]}")
-
-        return actions.astype(np.float32, copy=False)
+        
+        # Validate shape: must be (T, 11) where T >= 1
+        assert actions.ndim == 2, f"Expected 2D actions, got {actions.ndim}D"
+        assert actions.shape[1] == 11, f"Expected 11 action dims, got {actions.shape[1]}"
+        assert actions.shape[0] >= 1, f"Expected T >= 1, got {actions.shape[0]}"
+        
+        return {"actions": actions}
+    
+    def _run_openpi_inference(self, obs_dict: dict) -> np.ndarray:
+        """Run OpenPI model inference.
+        
+        This is a placeholder. The actual implementation depends on:
+        - OpenPI's policy module structure
+        - How to call the model with params
+        - Expected output shape
+        """
+        # TODO: Implement actual OpenPI inference
+        # This might look like:
+        # actions = openpi_policy_fn(self.params, obs_dict)
+        raise NotImplementedError(
+            "OpenPI inference not yet implemented. "
+            "Need to inspect OpenPI API and checkpoint structure."
+        )

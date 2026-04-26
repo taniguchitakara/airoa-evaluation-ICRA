@@ -19,7 +19,7 @@ COPY server ./server
 COPY runtime_core ./runtime_core
 
 # Create virtual environment and install locked deps including local workspace packages.
-RUN uv venv --python 3.11 /workspace/.venv
+RUN uv venv --python 3.11 --seed /workspace/.venv
 RUN GIT_LFS_SKIP_SMUDGE=1 uv sync --frozen --no-dev --no-install-project
 RUN uv pip install --python /workspace/.venv/bin/python pytest
 
