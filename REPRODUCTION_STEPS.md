@@ -56,14 +56,6 @@ mkdir -p src/my_policy
 rclone copy s3://airoa-icra-team-15/my_checkpoint ./src/my_policy/my_checkpoint
 ```
 
-Alternatively, use your own download method (HF CLI, `curl`, AWS S3, etc.):
-
-```bash
-mkdir -p checkpoints/<name>
-aws --profile <profile> --endpoint-url <url> \
-    s3 sync s3://<bucket>/<path>/ checkpoints/<name>/
-```
-
 ### 3.3 Environment variables
 
 The harness reads only three variables. List the ones you need:
@@ -93,45 +85,7 @@ echo "READY"
 nvidia-smi --query-gpu=memory.used,memory.free --format=csv
 ```
 
-### 3.6 Example output
-
-```
-[INFO] [1777685767.977343]: Language instruction: Grasp the apple.
-[INFO] [1777685767.979970]: Action: [-0.09246958 -0.29546636 -0.07545501  0.07828158 -0.38658898 -0.18507129
-  0.13670256  0.16160193  0.00120045  0.00101012  0.09707234]
-[INFO] [1777685768.069081]: Action executed.
-[INFO] [1777685768.070608]: Language instruction: Grasp the apple.
-[INFO] [1777685768.072403]: Action: [-8.36987617e-01  2.48983090e-01 -9.11006314e-02 -5.41954716e-02
-  1.50849275e-01 -1.87482268e-01 -6.78847310e-01  9.79919888e-02
- -2.26931115e-05  6.77417847e-04  1.06662489e-01]
-[INFO] [1777685768.169302]: Action executed.
-[INFO] [1777685768.170858]: Language instruction: Grasp the apple.
-[INFO] [1777685768.172623]: Action: [-5.56760268e-01  1.01885370e-01 -5.98885235e-01  4.83095874e-01
-  6.32152848e-01 -1.91333979e-01  1.38033671e-01  4.21701370e-01
-  1.24661939e-03  6.07066206e-04  1.12609714e-01]
-[INFO] [1777685768.269304]: Action executed.
-[INFO] [1777685768.270882]: Language instruction: Grasp the apple.
-[INFO] [1777685768.272668]: Action: [-5.29337803e-01 -4.32714501e-02 -1.27289498e+00  1.50905967e-01
- -2.36704538e-01 -1.97564229e-01  4.02587720e-01 -1.45444886e-01
-  8.81438493e-04  7.32054410e-04  1.10381812e-01]
-[INFO] [1777685768.369301]: Action executed.
-[INFO] [1777685768.370882]: Language instruction: Grasp the apple.
-[INFO] [1777685768.372642]: Action: [ 1.00650157e+00  5.68600831e-03 -4.04673013e-01  5.35975456e-01
- -5.96296794e-01 -1.98895767e-01  5.96039654e-01 -1.34861296e-01
-  3.05418973e-04  6.98853342e-04  1.07818596e-01]
-[INFO] [1777685768.469301]: Action executed.
-[INFO] [1777685768.470858]: Language instruction: Grasp the apple.
-[INFO] [1777685768.472673]: Action: [-3.24975949e-01  8.67282930e-02  6.49093191e-01 -9.63692022e-01
-  5.92806204e-01 -2.02976480e-01 -2.59924627e-01 -1.41252952e+00
-  6.54695614e-04  8.45194154e-04  9.66115817e-02]
-[INFO] [1777685768.721715]: Action executed.
-[INFO] [1777685768.722723]: Language instruction: Grasp the apple.
-[INFO] [1777685768.723481]: Action: [-2.39688339e-01 -1.29832878e-01  2.32059130e-02 -7.15727483e-01
- -4.99993531e-01  1.03935987e-01  1.64779445e-01 -1.62862997e-01
-  1.07077509e-03  5.70506527e-05  1.46058267e-02]
-```
-
-### 3.7 Stop
+### 3.6 Stop
 
 ```bash
 ./RUN-DOCKER-CONTAINER.sh down
@@ -198,13 +152,40 @@ Total size: ~X GB
 
 ## 7. Smoke test expected output
 
-Copy 1–3 log lines from your own successful run so the evaluator knows what "working" looks like:
-
 ```
-(paste actual log lines here, e.g.:)
-[INFO] server listening on 0.0.0.0:8000
-[INFO] Action executed.
-[INFO] Action executed.
+[INFO] [1777685767.977343]: Language instruction: Grasp the apple.
+[INFO] [1777685767.979970]: Action: [-0.09246958 -0.29546636 -0.07545501  0.07828158 -0.38658898 -0.18507129
+  0.13670256  0.16160193  0.00120045  0.00101012  0.09707234]
+[INFO] [1777685768.069081]: Action executed.
+[INFO] [1777685768.070608]: Language instruction: Grasp the apple.
+[INFO] [1777685768.072403]: Action: [-8.36987617e-01  2.48983090e-01 -9.11006314e-02 -5.41954716e-02
+  1.50849275e-01 -1.87482268e-01 -6.78847310e-01  9.79919888e-02
+ -2.26931115e-05  6.77417847e-04  1.06662489e-01]
+[INFO] [1777685768.169302]: Action executed.
+[INFO] [1777685768.170858]: Language instruction: Grasp the apple.
+[INFO] [1777685768.172623]: Action: [-5.56760268e-01  1.01885370e-01 -5.98885235e-01  4.83095874e-01
+  6.32152848e-01 -1.91333979e-01  1.38033671e-01  4.21701370e-01
+  1.24661939e-03  6.07066206e-04  1.12609714e-01]
+[INFO] [1777685768.269304]: Action executed.
+[INFO] [1777685768.270882]: Language instruction: Grasp the apple.
+[INFO] [1777685768.272668]: Action: [-5.29337803e-01 -4.32714501e-02 -1.27289498e+00  1.50905967e-01
+ -2.36704538e-01 -1.97564229e-01  4.02587720e-01 -1.45444886e-01
+  8.81438493e-04  7.32054410e-04  1.10381812e-01]
+[INFO] [1777685768.369301]: Action executed.
+[INFO] [1777685768.370882]: Language instruction: Grasp the apple.
+[INFO] [1777685768.372642]: Action: [ 1.00650157e+00  5.68600831e-03 -4.04673013e-01  5.35975456e-01
+ -5.96296794e-01 -1.98895767e-01  5.96039654e-01 -1.34861296e-01
+  3.05418973e-04  6.98853342e-04  1.07818596e-01]
+[INFO] [1777685768.469301]: Action executed.
+[INFO] [1777685768.470858]: Language instruction: Grasp the apple.
+[INFO] [1777685768.472673]: Action: [-3.24975949e-01  8.67282930e-02  6.49093191e-01 -9.63692022e-01
+  5.92806204e-01 -2.02976480e-01 -2.59924627e-01 -1.41252952e+00
+  6.54695614e-04  8.45194154e-04  9.66115817e-02]
+[INFO] [1777685768.721715]: Action executed.
+[INFO] [1777685768.722723]: Language instruction: Grasp the apple.
+[INFO] [1777685768.723481]: Action: [-2.39688339e-01 -1.29832878e-01  2.32059130e-02 -7.15727483e-01
+ -4.99993531e-01  1.03935987e-01  1.64779445e-01 -1.62862997e-01
+  1.07077509e-03  5.70506527e-05  1.46058267e-02]
 ```
 
 ---
