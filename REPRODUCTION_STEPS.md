@@ -1,4 +1,4 @@
-# REPRODUCTION_STEPS — Team XX (submission note template)
+# REPRODUCTION_STEPS — Team nlab
 
 > Submissions are sent to the organizers as **fork URL + branch + note** (a description of how to run your model). This file is the recommended structure for your **note** — copy it to your repository root as `REPRODUCTION_STEPS.md`, fill every section, commit it, and link (or paste) it as your note. The evaluator will follow it **literally**, so commands and paths must be correct. Placeholders in parentheses are guidance — replace with your actual values.
 >
@@ -10,12 +10,15 @@
 
 | Item | Value |
 |---|---|
+| Team name | nlab |
+| Representative | takara taniguchi |
+| Submission date | 2026-05-01(AoE) |
 | Model summary | finetuned baseline |
 | Framework | OpenPI |
 | Repository | `https://github.com/taniguchitakara/airoa-evaluation-ICRA` |
 | Branch | `feat/my-policy-openpi` |
 | Commit hash | `abcd1234…` (optional but recommended) |
-| Checkpoint S3 path | `s3://<bucket>/<path>/` |
+| Checkpoint S3 path | `s3://airoa-icra-team-15/my_checkpoint` |
 | Expected VRAM | ~18 GB |
 
 ---
@@ -25,6 +28,7 @@
 - NVIDIA GPU with ≥ 16 GB VRAM (**Blackwell-compatible**: RTX 5070 Ti / compute 12.0)
 - Docker Engine + Docker Compose v2
 - NVIDIA Container Toolkit
+- `rclone` (for checkpoint download from S3)
 - External credentials required (e.g. `HF_TOKEN`, S3 credentials)? **State "none required" if not applicable.**
 
 > If your model relies on anything not bundled in the repo/image at build time (gated HuggingFace models, external services, etc.), list every external resource the evaluator must access. The evaluation environment may be offline/locked.
@@ -44,20 +48,28 @@ git rev-parse HEAD  # optional: should match the commit hash in §1
 
 ### 3.2 Download checkpoint
 
+The sample checkpoint is available at:
+
+```bash
+# Option 1: Using rclone (recommended)
+mkdir -p src/my_policy
+rclone copy s3://airoa-icra-team-15/my_checkpoint ./src/my_policy/my_checkpoint
+```
+
+Alternatively, use your own download method (HF CLI, `curl`, AWS S3, etc.):
+
 ```bash
 mkdir -p checkpoints/<name>
 aws --profile <profile> --endpoint-url <url> \
     s3 sync s3://<bucket>/<path>/ checkpoints/<name>/
 ```
 
-(Replace with whatever download method you actually use — HF CLI, `curl`, etc.)
-
 ### 3.3 Environment variables
 
 The harness reads only three variables. List the ones you need:
 
 ```bash
-export POLICY_CHECKPOINT_PATH=/home/canzone/Desktop/work/airoa/airoa-evaluation-ICRA/src/my_policy/my_checkpoint
+export POLICY_CHECKPOINT_PATH=$(pwd)/src/my_policy/my_checkpoint
 export POLICY_PYTORCH_DEVICE=cuda                             # optional
 export POLICY_CONFIG_NAME="pi05_hsr_finetune"
 ```

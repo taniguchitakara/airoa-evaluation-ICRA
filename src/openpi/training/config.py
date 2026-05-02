@@ -1224,32 +1224,35 @@ _CONFIGS = [
     # Sample checkpoint config
     #
     TrainConfig(
-        name="pi05_hsr_task6891011_level12_v2.5_train_adaptive",
+        name="pi05_hsr_finetune",
+        checkpoint_base_dir="/home/nlab/taniguchi/airoa/mount/models/airoa/outputs/pi05_hsr_finetune/",
         model=pi0_config.Pi0Config(
             pi05=True,
             action_dim=32,  # pi05 is trained with 32-dim actions
             action_horizon=16,
         ),
         data=LeRobotHSRDataConfig(
-            repo_id="lerobot_datasets/task6891011_level12_v2.5_train",
+            repo_id="/home/nlab/taniguchi/airoa/mount/data/airoa/airoa-moma",
             assets=AssetsConfig(
-                assets_dir="./assets/pi05_hsr_task6891011_level12_v2.5_train_adaptive",
+                assets_dir="/home/nlab/taniguchi/airoa/mount/models/icra_workshop/100000/assets",
                 asset_id="lerobot_datasets/task6891011_level12_v2.5_train",
             ),
             base_config=DataConfig(
                 prompt_from_task=True,
             ),
         ),
-        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+        weight_loader=weight_loaders.CheckpointWeightLoader("/home/nlab/taniguchi/airoa/mount/models/icra_workshop/100000/params"),
         lr_schedule=_optimizer.CosineDecaySchedule( # batch 64
             warmup_steps=1_000,
             peak_lr=3.5e-5,     # 2.5e-5 × √2 = 3.5e-5
             decay_steps=1_300_000,  # Match num_train_steps.
             decay_lr=3.5e-6,    # 2.5e-6 × √2 = 3.5e-6
         ),
-        batch_size=64,
+        ema_decay=None,      # add this
+        batch_size=32,
         num_workers=8,
         num_train_steps=1_300_000,
+        fsdp_devices=1,   # ← 追加
     ),
 ]
 
