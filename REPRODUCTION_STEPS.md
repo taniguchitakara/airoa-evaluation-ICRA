@@ -119,28 +119,17 @@ Anything the evaluator must know that is not obvious from the commands above. Ex
 
 ## 6. Checkpoint file layout
 
-List what's inside your checkpoint directory. Layout depends on your framework — two common patterns:
-
 **OpenPI-style:**
 
 ```
-<name>/
-├── params/                            # or model.safetensors
-├── assets/<asset_id>/
-│   └── norm_stats.json
-└── config.yaml                        # or config.json
+my_checkpoint/
+├── assets
+├── _CHECKPOINT_METADATA
+├── params
+└── train_state
 ```
 
-**Custom PyTorch-style:**
-
-```
-<name>/
-├── model.pt                           # or model.safetensors
-├── config.json
-└── (any tokenizer / preprocessor files)
-```
-
-Include the actual layout and total size of your submission:
+Total size and additional details:
 
 ```
 (paste your `tree` or `ls` output here)
